@@ -37,6 +37,16 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#ifdef ANDROID
+#include <cutils/log.h>
+/* support versions < JellyBean */
+#ifndef ALOGE
+#define ALOGE LOGE
+#endif
+#ifndef ALOGI
+#define ALOGI LOGI
+#endif
+#endif
 
 #define DRIVER_EXTENSION	"_drv_video.so"
 
@@ -108,10 +118,8 @@ int vaDisplayIsValid(VADisplay dpy)
 
 static void default_log_error(const char *buffer)
 {
-# ifdef ANDROID_ALOG
+# ifdef ANDROID
     ALOGE("%s", buffer);
-# elif ANDROID_LOG
-    LOGE("%s", buffer);
 # else
     fprintf(stderr, "libva error: %s", buffer);
 # endif
@@ -119,10 +127,8 @@ static void default_log_error(const char *buffer)
 
 static void default_log_info(const char *buffer)
 {
-# ifdef ANDROID_ALOG
+# ifdef ANDROID
     ALOGI("%s", buffer);
-# elif ANDROID_LOG
-    LOGI("%s", buffer);
 # else
     fprintf(stderr, "libva info: %s", buffer);
 # endif
@@ -155,6 +161,7 @@ vaMessageCallback vaSetInfoCallback(vaMessageCallback callback)
 
 void va_errorMessage(const char *msg, ...)
 {
+#if ENABLE_VA_MESSAGING
     char buf[512], *dynbuf;
     va_list args;
     int n, len;
@@ -179,10 +186,12 @@ void va_errorMessage(const char *msg, ...)
     }
     else if (len > 0)
         va_log_error(buf);
+#endif
 }
 
 void va_infoMessage(const char *msg, ...)
 {
+#if ENABLE_VA_MESSAGING
     char buf[512], *dynbuf;
     va_list args;
     int n, len;
@@ -207,6 +216,7 @@ void va_infoMessage(const char *msg, ...)
     }
     else if (len > 0)
         va_log_info(buf);
+#endif
 }
 
 static bool va_checkVtable(void *ptr, char *function)
@@ -303,6 +313,7 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
                 int minor;
             } compatible_versions[] = {
                 { VA_MAJOR_VERSION, VA_MINOR_VERSION },
+                { 0, 39 },
                 { 0, 38 },
                 { 0, 37 },
                 { 0, 36 },
