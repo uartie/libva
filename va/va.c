@@ -60,7 +60,7 @@
 
 /*
  * read a config "env" for libva.conf or from environment setting
- * liva.conf has higher priority
+ * libva.conf has higher priority
  * return 0: the "env" is set, and the value is copied into env_value
  *        1: the env is not set
  */
@@ -75,13 +75,13 @@ int va_parseConfig(char *env, char *env_value)
     
     fp = fopen("/etc/libva.conf", "r");
     while (fp && (fgets(oneline, 1024, fp) != NULL)) {
-	if (strlen(oneline) == 1)
-	    continue;
+        if (strlen(oneline) == 1)
+            continue;
         token = strtok_r(oneline, "=\n", &saveptr);
-	value = strtok_r(NULL, "=\n", &saveptr);
+        value = strtok_r(NULL, "=\n", &saveptr);
 
-	if (NULL == token || NULL == value)
-	    continue;
+        if (NULL == token || NULL == value)
+            continue;
 
         if (strcmp(token, env) == 0) {
             if (env_value) {
@@ -157,6 +157,24 @@ vaMessageCallback vaSetInfoCallback(vaMessageCallback callback)
     vaMessageCallback old_callback = va_log_info;
     va_log_info = callback;
     return old_callback;
+}
+
+void va_MessagingInit()
+{
+#if ENABLE_VA_MESSAGING
+    char env_value[1024];
+
+    if (va_parseConfig("LIBVA_MESSAGING_LEVEL", &env_value[0]) == 0) {
+        if (strcmp(env_value, "0") == 0) {
+            vaSetInfoCallback(NULL);
+            vaSetErrorCallback(NULL);
+        }
+
+        if (strcmp(env_value, "1") == 0) {
+            vaSetInfoCallback(NULL);
+        }
+    }
+#endif
 }
 
 void va_errorMessage(const char *msg, ...)
@@ -590,6 +608,8 @@ VAStatus vaInitialize (
     va_TraceInit(dpy);
 
     va_FoolInit(dpy);
+
+    va_MessagingInit();
 
     va_infoMessage("VA-API version %s\n", VA_VERSION_S);
 
